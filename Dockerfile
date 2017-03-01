@@ -1,49 +1,59 @@
-#Dockerfile for python-opencv
+FROM python:2.7
 
-# Pull base image.
+MAINTAINER Papaworkfromhome
 
-FROM jsurf/rpi-raspbian:latest
-RUN [ "cross-build-start" ]
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    git \
+RUN mkdir -p /usr/src/app 
+WORKDIR /usr/src/app 
+
+# Various Python and C/build deps
+RUN apt-get update && apt-get install -y \ 
     wget \
-    unzip \
+    build-essential \ 
+    cmake \ 
+    git \
+    unzip \ 
     pkg-config \
-    libswscale-dev \
-    python3-dev \
-    python3-numpy \
-    libtbb2 \
-    libtbb-dev \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    libjasper-dev \
-    libavformat-dev \
-    libjpeg62 \
-    libtiff4 \
-    libjasper1 \
-    libilmbase6 \
-    libopenexr6 \
-    libgtk2.0-0 \
-    libdc1394-22 \
-    libv4l-0 && apt-get clean && rm -rf /var/lib/apt/lists/*
+    python-dev \ 
+    python-opencv \ 
+    libopencv-dev \ 
+    libav-tools  \ 
+    libjpeg-dev \ 
+    libpng-dev \ 
+    libtiff-dev \ 
+    libjasper-dev \ 
+    libgtk2.0-dev \ 
+    python-numpy \ 
+    python-pycurl \ 
+    libatlas-base-dev \
+    gfortran \
+    webp \ 
+    python-opencv \ 
+    qt5-default \
+    libvtk6-dev \ 
+    zlib1g-dev 
 
-WORKDIR /
+# Install Open CV - Warning, this takes absolutely forever
+RUN mkdir -p ~/opencv cd ~/opencv && \
+    wget https://github.com/Itseez/opencv/archive/3.0.0.zip && \
+    unzip 3.0.0.zip && \
+    rm 3.0.0.zip && \
+    mv opencv-3.0.0 OpenCV && \
+    cd OpenCV && \
+    mkdir build && \ 
+    cd build && \
+    cmake \
+    -DWITH_QT=ON \ 
+    -DWITH_OPENGL=ON \ 
+    -DFORCE_VTK=ON \
+    -DWITH_TBB=ON \
+    -DWITH_GDAL=ON \
+    -DWITH_XINE=ON \
+    -DBUILD_EXAMPLES=ON .. && \
+    make -j4 && \
+    make install && \ 
+    ldconfig
 
-RUN cv_version='3.1.0' \
-    && wget https://github.com/Itseez/opencv/archive/"$cv_version".zip \
-    && unzip "$cv_version".zip \
-    && mkdir /opencv-"$cv_version"/cmake_binary \
-    && cd /opencv-"$cv_version"/cmake_binary \
-    && cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_gpu=OFF -DBUILD_opencv_ocl=OFF
-    && make install \
-    && rm /"$cv_version".zip \
-    && rm -r /opencv-"$cv_version"
+COPY requirements.txt /usr/src/app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN apt-get install python-pip \
-    pip install picamera \
-    pip install rpio
-
-CMD ["/bin/bash"]
+COPY . /usr/src/app 
